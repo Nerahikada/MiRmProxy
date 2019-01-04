@@ -1,0 +1,47 @@
+{
+    "name": "nerahikada/mirmproxy",
+    "authors": [
+        {
+            "name": "Nerahikada"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {
+        "pocketmine/pocketmine-mp": "dev-master"
+    },
+    "autoload": {
+        "psr-4": {
+            "": ["src"]
+        }
+    },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/pmmp/PocketMine-MP"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/pmmp/RakLib"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/pmmp/SPL"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/pmmp/BinaryUtils"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/pmmp/NBT"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/pmmp/Math"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/pmmp/Snooze"
+        }
+    ]
+}
