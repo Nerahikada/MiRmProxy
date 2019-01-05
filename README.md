@@ -19,4 +19,5 @@ The biggest feature are **support FTP**, **can use any plugins** and **can use P
 1. Enable FTP in `https://c.mirm.jp/pluginmanager?srvid=<YOUR ID>`.<br>
 2. Rename `PocketMine-MP.phar` to `mochikomi.phar`.<br>
 3. Upload `mochikomi.phar` using FTP.<br>
-4. Enable your own PocketMine-MP.phar in `https://c.mirm.jp/pharchange?srvid=<YOUR ID>`.
+4. Enable your own PocketMine-MP.phar in `https://c.mirm.jp/pharchange?srvid=<YOUR ID>`.<br>
+	(Type `mochikomi` to textbox and send.)
