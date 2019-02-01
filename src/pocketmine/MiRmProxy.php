@@ -21,6 +21,9 @@ class MiRmProxy{
 	private const MAX_SPLIT_SIZE = 128;
 	private const MAX_SPLIT_COUNT = 4;
 
+	private const PACKET_LIMIT = 200;
+	private const SESSION_LIMIT = 10;
+
 	/** @var Proxy */
 	private static $instance = null;
 
@@ -28,6 +31,15 @@ class MiRmProxy{
 	private $config;
 	/** @var Config */
 	private $properties;
+
+	/** @var int[] string (address) => int (unblock time) */
+	private $block = [];
+	/** @var int */
+	private $lastSec = 0;
+	/** @var int[] string (address) => int (number of packets) */
+	private $ipSec = [];
+	/** @var int[] */
+	private $ipSession = [];
 
 	/** @var UDPServerSocket */
 	private $socket;
@@ -91,53 +103,81 @@ class MiRmProxy{
 			return;
 		}
 
-		$stringAddress = $address->toString();
-
-		if(!isset($this->clients[$stringAddress])){
-			$socket = $this->getSocket();
-			echo "Open new session (" . $stringAddress . " -> " . $socket->getBindAddress()->port . ")" . PHP_EOL;
-			$this->clients[$stringAddress] = new Client($this->serverAddress, clone $address, $socket);
+		if(isset($this->block[$address->ip])){
+			return;
 		}
 
-		$client = $this->clients[$stringAddress];
+		$now = time();
+		if($this->lastSec !== $now){
+			$this->lastSec = $now;
+			$this->ipSec = [];
+		}
 
-		$pid = ord($buffer{0});
-		if(!(RakLibPacketPool::getPacket($pid, $buffer) instanceof OfflineMessage)
-				&& ($pid & Datagram::BITFLAG_VALID) !== 0
-				&& !($pid & Datagram::BITFLAG_ACK) && !($pid & Datagram::BITFLAG_NAK)
-				&& !$client->loggedIn){
-			$datagram = new Datagram($buffer);
-			if($datagram instanceof Datagram){
-				$datagram->decode();
-				foreach($datagram->packets as $pk){
-					if($pk->hasSplit){
-						$pk = $this->handleSplit($pk);
-					}
-					if($pk !== null){
-						$id = ord($pk->buffer{0});
-						if($id >= MessageIdentifiers::ID_USER_PACKET_ENUM){
-							$pk = EncapsulatedPacket::fromInternalBinary($pk->toInternalBinary());
-							if($pk->buffer !== "" && $pk->buffer{0} === self::MCPE_RAKNET_PACKET_ID){ //Batch
-								$payload = substr($pk->buffer, 1);
-								$payload = @zlib_decode($payload, 1024 * 1024 * 64); //Max 64MB
-								if($payload !== false){
-									$stream = new PacketStream($payload);
-									while(!$stream->feof()){
-										$packet = PacketPool::getPacket($stream->getString());
-										if($packet instanceof LoginPacket){
-											$client->loggedIn = true;
-											$packet->decode();
-											if(!$packet->feof() && !$packet->mayHaveUnreadBytes()){}
-											####################################
-											unset($packet->skin);
-											unset($packet->chainData);
-											unset($packet->clientDataJwt);
-											unset($packet->clientData["SkinData"]);
-											unset($packet->clientData["SkinGeometry"]);
-											unset($packet->clientData["SkinGeometryName"]);
-											unset($packet->clientData["SkinId"]);
-											####################################
-											var_dump($packet);
+		if(isset($this->ipSec[$address->ip])){
+			if(++$this->ipSec[$address->ip] >= self::PACKET_LIMIT){
+				echo "Receive too much packet" . PHP_EOL;
+				$this->blockAddress($address->ip);
+				return;
+			}
+		}else{
+			$this->ipSec[$address->ip] = 1;
+		}
+
+		if(isset($this->ipSession[$address->ip])){
+			if($this->ipSession[$address->ip] >= self::SESSION_LIMIT){
+				echo "Create over session" . PHP_EOL;
+				$this->blockAddress($address->ip);
+				return;
+			}
+		}else{
+			$this->ipSession[$address->ip] = 1;
+		}
+
+		$client = $this->openSession($address);
+		try{
+			$pid = ord($buffer{0});
+			if(!(RakLibPacketPool::getPacket($pid, $buffer) instanceof OfflineMessage)
+					&& ($pid & Datagram::BITFLAG_VALID) !== 0
+					&& !($pid & Datagram::BITFLAG_ACK) && !($pid & Datagram::BITFLAG_NAK)
+					&& !$client->loggedIn){
+				$datagram = new Datagram($buffer);
+				if($datagram instanceof Datagram){
+					$datagram->decode();
+					foreach($datagram->packets as $pk){
+						if($pk->hasSplit){
+							$pk = $this->handleSplit($pk);
+						}
+						if($pk !== null){
+							$id = ord($pk->buffer{0});
+							if($id >= MessageIdentifiers::ID_USER_PACKET_ENUM){
+								$pk = EncapsulatedPacket::fromInternalBinary($pk->toInternalBinary());
+								if($pk->buffer !== "" && $pk->buffer{0} === self::MCPE_RAKNET_PACKET_ID){ //Batch
+									$payload = substr($pk->buffer, 1);
+									$payload = @zlib_decode($payload, 1024 * 1024 * 64); //Max 64MB
+									if($payload !== false){
+										$stream = new PacketStream($payload);
+										while(!$stream->feof()){
+											$packet = PacketPool::getPacket($stream->getString());
+											if($packet instanceof LoginPacket){
+												$client->loggedIn = true;
+												$packet->decode();
+												if(!$packet->feof() && !$packet->mayHaveUnreadBytes()){}
+												####################################
+												unset($packet->skin);
+												unset($packet->chainData);
+												unset($packet->clientDataJwt);
+												unset($packet->identityPublicKey);
+												unset($packet->clientData["CapeData"]);
+												unset($packet->clientData["PremiumSkin"]);
+												unset($packet->clientData["SkinData"]);
+												unset($packet->clientData["SkinGeometry"]);
+												unset($packet->clientData["SkinGeometryName"]);
+												unset($packet->clientData["SkinId"]);
+												unset($packet->offset);
+												unset($packet->buffer);
+												####################################
+												var_dump($packet);
+											}
 										}
 									}
 								}
@@ -146,9 +186,14 @@ class MiRmProxy{
 					}
 				}
 			}
+		}catch(\Throwable $e){
+			echo "Packet from " . $address->ip . " (" . strlen($buffer) . " bytes): 0x" . bin2hex($buffer) . PHP_EOL;
+			echo $e->getMessage() . PHP_EOL;
+			echo $e->getTraceAsString() . PHP_EOL;
+			$this->blockAddress($address->ip);
 		}
 
-		$this->clients[$stringAddress]->writePacketToServer($buffer);
+		$client->writePacketToServer($buffer);
 	}
 
 	public function handleSplit(EncapsulatedPacket $packet) : ?EncapsulatedPacket{
@@ -188,7 +233,18 @@ class MiRmProxy{
 		return null;
 	}
 
-	private function getSocket() : UDPServerSocket{
+	private function receivePacketFromServer(){
+		foreach($this->clients as $key => $client){
+			if($client->receivePacketFromServer($buffer)){
+				$client->writePacketToClient($this->socket, $buffer);
+			}
+			if(!$client->uptime()){
+				$this->closeSession($client);
+			}
+		}
+	}
+
+	private function createSocket() : UDPServerSocket{
 		$address = new InternetAddress("0.0.0.0", 19132, 4);
 		while(true){
 			$continue = false;
@@ -204,16 +260,30 @@ class MiRmProxy{
 		return $socket;
 	}
 
-	private function receivePacketFromServer(){
-		foreach($this->clients as $key => $client){
-			if($client->receivePacketFromServer($buffer)){
-				$client->writePacketToClient($this->socket, $buffer);
-			}
-			if(!$client->uptime()){
-				echo "Close session (" . $key . ")" . PHP_EOL;
-				unset($this->clients[$key]);
-			}
+	private function openSession(InternetAddress $address) : Client{
+		$sessionKey = $address->toString();
+		if(!isset($this->clients[$sessionKey])){
+			$socket = $this->createSocket();
+			echo "Open new session (" . $sessionKey . " -> " . $socket->getBindAddress()->port . ")" . PHP_EOL;
+			++$this->ipSession[$address->ip];
+			$this->clients[$sessionKey] = new Client($this->serverAddress, clone $address, $socket);
 		}
+
+		return $this->clients[$sessionKey];
+	}
+
+	private function closeSession(Client $client){
+		$address = $client->getAddress();
+		$sessionKey = $address->toString();
+
+		echo "Close session (" . $sessionKey . ")" . PHP_EOL;
+		--$this->ipSession[$address->ip];
+		unset($this->clients[$sessionKey]);
+	}
+
+	private function blockAddress(string $address){
+		echo "Blocked " . $address . PHP_EOL;
+		$this->block[$address] = true;
 	}
 
 }

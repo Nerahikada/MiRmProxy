@@ -61,10 +61,10 @@ function buildPhar(string $pharPath, string $basePath, array $includedPaths, arr
 define('PATH', dirname(__FILE__, 1) . DIRECTORY_SEPARATOR);
 define('DEVTOOLS_REQUIRE_FILE_STUB', '<?php require("phar://" . __FILE__ . "/%s"); __HALT_COMPILER();');
 
-$pharPath = PATH . "mochikomi.phar";
+$pharPath = PATH . "PocketMine-MP.phar";
 $metadata = [
 	"name" => "MiRmProxy",
-	"version" => "1.0.2",
+	"version" => "2.0.0",
 	"api" => "0.0.0",
 	"minecraft" => "v1.8.0",
 	"creationDate" => time(),

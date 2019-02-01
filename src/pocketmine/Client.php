@@ -50,11 +50,15 @@ class Client{
 	}
 
 	public function uptime() : bool{
-		if(time() - $this->time >= 30){
+		if(time() - $this->time >= 10){
 			$this->socket->close();
 			return false;
 		}
 		return true;
+	}
+
+	public function getAddress() : InternetAddress{
+		return $this->clientAddress;
 	}
 
 }

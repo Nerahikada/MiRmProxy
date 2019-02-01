@@ -10,7 +10,7 @@ namespace {
 namespace pocketmine {
 
 	const NAME = "MiRmProxy";
-	const VERSION = "1.0.2";
+	const VERSION = "2.0.0";
 	const PROTOCOL = 313;
 
 	define('pocketmine\PATH', dirname(__FILE__, 3) . DIRECTORY_SEPARATOR);
