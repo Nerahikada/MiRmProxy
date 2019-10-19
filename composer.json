@@ -7,7 +7,7 @@
     ],
     "minimum-stability": "dev",
     "require": {
-        "pocketmine/pocketmine-mp": "^3.9.1"
+        "pocketmine/pocketmine-mp": "dev-master"
     },
     "autoload": {
         "psr-4": {
@@ -17,7 +17,7 @@
     "repositories": [
         {
             "type": "vcs",
-            "url": "https://github.com/pmmp/PocketMine-MP"
+            "url": "https://github.com/Nerahikada/pmmp-v4-alpha"
         },
         {
             "type": "vcs",
