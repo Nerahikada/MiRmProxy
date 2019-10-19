@@ -1,11 +1,16 @@
 # MiRmProxy
 Proxy for Minecraft Bedrock Edition
 
-# How to use
+# How to use (Installation)
 1. Download PHP binary for PocketMine-MP. If you need to help, see [here](https://pmmp.readthedocs.io/en/rtfd/installation.html).<br>
 2. Install composer and run `composer install`.<br>
 3. Run start.cmd.<br>
 4. Don't forget to edit `server.properties` and `config.yml`.
+
+# How to install composer
+[https://getcomposer.org/doc/00-intro.md](https://getcomposer.org/doc/00-intro.md)<br>
+[https://getcomposer.org/download/](https://getcomposer.org/download/)
+
 
 # How to make PocketMine-MP.phar
 1. Run `archive.bat`.
