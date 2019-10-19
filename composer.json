@@ -7,7 +7,7 @@
     ],
     "minimum-stability": "dev",
     "require": {
-        "pocketmine/pocketmine-mp": "dev-master"
+        "pocketmine/pocketmine-mp": "^3.9.1"
     },
     "autoload": {
         "psr-4": {
