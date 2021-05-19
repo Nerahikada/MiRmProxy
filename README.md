@@ -16,7 +16,10 @@ Proxy for Minecraft Bedrock Edition
 1. Run `archive.bat`.
 
 ## What is MiRm?
-Website: [Mirm](https://www.mirm.jp/)<br>
+
+:warning: **MiRm is no longer in service.**
+
+Website: [MiRm](https://www.mirm.jp/)<br>
 MiRm is free instant server like leet.<br>
 The biggest feature are **support FTP**, **can use any plugins** and **can use PocketMine-MP.phar prepared you**.<br>
 
